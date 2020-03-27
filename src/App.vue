@@ -1,71 +1,51 @@
-<template>
-    <div id="app">
-        <div id="introduction">
-            <h1 class="nq-h1">Hi!</h1>
-            <p class="nq-text">
-                Congratulations, you just set up a fully functional, Nimiq powered app.
-                This app starter kit already contains everything you need to build an awesome app.
-            </p>
-        </div>
-
-        <ProjectInfo />
-
-        <StyleInfo />
-
-        <VueComponentsInfo />
-
-        <HubInfo />
-
-        <CoreInfo />
-
-        <NetworkInfo />
-
-        <BrowserWarningInfo />
-
-        <UtilsInfo />
-
-        <WhatNextInfo />
-    </div>
+<template lang="pug">
+    #app
+        transition
+            .loading(v-if='!loaded') Loading...
+            .content(v-else)
+                .balance Balance {{ balance }}
+                .address {{ address }}
+                .height Block height {{ height }} - next block expected in {{ countdown }} seconds
+                .rate 1 NIM = {{ usdRate > 0 ? usdRate : '*loading*' }} USD
+                hr
+                .tx-list
+                    .actions
+                        input(type='radio' v-model='nimValues' :value='true' id='nimValues')
+                        label(for='nimValues') NIM values
+                        input(type='radio' v-model='nimValues' :value='false' id='usdValues')
+                        label(for='usdValues')  USD values
+                        | ---
+                        button.add(@click='addTx') +
+                        button.addMany(@click='showAddTxs = !showAddTxs') ++
+                        .addMany(v-if='showAddTxs')
+                            textarea.addresses(ref='addManyAddresses' placeholder='addresses separated by linebreaks')
+                            input.value(ref='addManyValue' placeholder='value (opt)')
+                            input.message(ref='addManyMessage' placeholder='message (opt)')
+                            button.add(@click='addTxs') Add
+                        | ---
+                        input.message(v-model='message' placeholder='message')
+                    .list
+                        .emtpy(v-if='txs.length') add transactions clicking "+" or "++"
+                        .tx(v-for="tx in txs" :key='tx.id')
+                            input.address(v-model='tx.address' :class='{valid}')
+                            | valid {{ valid(tx.address) }}
+                            input.value(v-model.number='tx.value')
+                            | {{ nimValues ? 'NIM' : 'USD' }}
+                            .converted.nq-text {{ converted(tx.value) }} {{ nimValues ? 'USD' : 'NIM' }}
+                    .status(v-if='txs.length > 0')
+                        .total
+                            | Total to send
+                            | {{ nimValues ? `${total} NIM / ${total * usdRate} USD` : '' }}
+                            | {{ !nimValues ? `${total} USD / ${Math.ceil(total / usdRate)} NIM` : '' }}
+                        .sufficient Enough funds? {{ sufficient }}
+                        button.send(@click='sendAll' :disabled='!sufficient') send
+                    .receipts(v-if='receipts && receipts.length > 0')
+                        textarea {{ receipts.join('\n') }}
 </template>
 
-<script lang="ts">
-import '@nimiq/style/nimiq-style.min.css';
-import '@nimiq/vue-components/dist/NimiqVueComponents.css';
-
-import { Component, Vue } from 'vue-property-decorator';
-import BrowserWarningInfo from './components/BrowserWarningInfo.vue';
-import CoreInfo from './components/CoreInfo.vue';
-import HubInfo from './components/HubInfo.vue';
-import NetworkInfo from './components/NetworkInfo.vue';
-import ProjectInfo from './components/ProjectInfo.vue';
-import StyleInfo from './components/StyleInfo.vue';
-import UtilsInfo from './components/UtilsInfo.vue';
-import VueComponentsInfo from './components/VueComponentsInfo.vue';
-import WhatNextInfo from './components/WhatNextInfo.vue';
-
-@Component({
-    components: {
-        BrowserWarningInfo,
-        CoreInfo,
-        HubInfo,
-        NetworkInfo,
-        ProjectInfo,
-        StyleInfo,
-        UtilsInfo,
-        VueComponentsInfo,
-        WhatNextInfo,
-    },
-})
-export default class App extends Vue {}
-</script>
+<script lang="ts" src="./app.ts"></script>
 
 <style lang="scss">
-#introduction {
-    max-width: 75rem;
-    margin-bottom: 6rem;
-    text-align: center;
-}
-
 #app > * {
     margin-left: auto;
     margin-right: auto;
