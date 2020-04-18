@@ -4,6 +4,7 @@ import '@nimiq/vue-components/dist/NimiqVueComponents.css';
 import { Component, Vue } from 'vue-property-decorator';
 import { NetworkClient } from '@nimiq/network-client';
 import { ValidationUtils } from '@nimiq/utils';
+import parseCsv from 'csv-parse/lib/sync';
 import { loadNimiqCryptography } from './lib/CoreLoader';
 
 type Nimiq = typeof import('@nimiq/core-web');
@@ -27,6 +28,7 @@ export default class App extends Vue {
     height = 0;
     txs: Tx[] = [];
     showAddTxs = false;
+    showAddViaCvs = true;
     nimValues = false;
     usdRate = 0.0;
     countdown = 60;
@@ -79,8 +81,6 @@ export default class App extends Vue {
     }
 
     addTxs() {
-        // TODO this should be a smart function figuring out the format of the pasted data
-        // e.g. line breaks or CSV
         const addresses = (this.$refs.addManyAddresses as HTMLTextAreaElement).value.trim();
         this.message = (this.$refs.addManyMessage as HTMLTextAreaElement).value.trim();
         if (addresses.length > 0) {
@@ -93,6 +93,37 @@ export default class App extends Vue {
             }
         }
         this.showAddTxs = false;
+    }
+
+    testCsv() {
+        const parsed = JSON.stringify(this.parseCsv());
+        (this.$refs.addViaCsvTest as HTMLDivElement).textContent = parsed;
+    }
+
+    addViaCsv() {
+        this.txs = this.parseCsv();
+    }
+
+    parseCsv(): Tx[] {
+        const csv = (this.$refs.addViaCsv as HTMLTextAreaElement).value.trim();
+        const csvData: any[][] = parseCsv(csv, {
+            cast: true,
+            // eslint-disable-next-line
+            cast_date: true,
+            delimiter: '\t',
+        });
+        console.warn(csvData);
+        if (csvData.length < 1) return [];
+
+        // understand column order
+        const first = csvData[0];
+        const valueIndex = first.findIndex((cell) => ValidationUtils.isValidAddress(cell));
+        if (valueIndex < 0) throw new Error('Address not found');
+        // const valueIndex = first.findIndex((cell) => parseInt(cell, 10) ValidationUtils.isValidAddress(cell));
+        const amountIndex = first.findIndex((cell) => Number.isInteger(cell));
+        if (amountIndex < 0) throw new Error('Amount not found');
+
+        return csvData.map((row, id) => ({ address: row[valueIndex], value: row[amountIndex], id }));
     }
 
     async sendAll() {

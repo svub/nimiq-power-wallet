@@ -22,10 +22,15 @@
                             input.value(ref='addManyValue' placeholder='value (opt)')
                             input.message(ref='addManyMessage' placeholder='message (opt)')
                             button.add(@click='addTxs') Add
+                        button.addMany(@click='showAddViaCvs = !showAddViaCvs') CSV
+                        .addMany(v-if='showAddViaCvs')
+                            textarea.csv(ref='addViaCsv' placeholder='paste from spreadsheet' @input='testCsv')
+                            .results(ref='addViaCsvTest')
+                            button.add(@click='addViaCsv') Add
                         | ---
                         input.message(v-model='message' placeholder='message')
                     .list
-                        .emtpy(v-if='txs.length') add transactions clicking "+" or "++"
+                        .emtpy(v-if='txs.length') add transactions by clicking "+", "++", or "csv"
                         .tx(v-for="tx in txs" :key='tx.id')
                             input.address(v-model='tx.address' :class='{valid}')
                             | valid {{ valid(tx.address) }}
@@ -49,5 +54,10 @@
 #app > * {
     margin-left: auto;
     margin-right: auto;
+}
+
+textarea {
+    height: 8em;
+    width: 30em;
 }
 </style>
