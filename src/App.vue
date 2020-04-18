@@ -44,6 +44,9 @@
                             | {{ !nimValues ? `${total} USD / ${Math.ceil(total / usdRate)} NIM` : '' }}
                         .sufficient Enough funds? {{ sufficient }}
                         button.send(@click='sendAll' :disabled='!sufficient') send
+                        br
+                        input(id='autoSend' type='checkbox' v-model='autoSend')
+                        label(for='autoSend') Auto send when balance is sufficiant
                     .receipts(v-if='receipts && receipts.length > 0')
                         textarea {{ receipts.join('\n') }}
 </template>

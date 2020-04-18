@@ -34,6 +34,7 @@ export default class App extends Vue {
     countdown = 60;
     receipts: string[] = [];
     message = '';
+    autoSend = false;
 
     async mounted() {
         if (!this.loaded) {
@@ -105,6 +106,7 @@ export default class App extends Vue {
     }
 
     parseCsv(): Tx[] {
+        this.showAddViaCvs = false;
         const csv = (this.$refs.addViaCsv as HTMLTextAreaElement).value.trim();
         const csvData: any[][] = parseCsv(csv, {
             cast: true,
@@ -157,6 +159,10 @@ export default class App extends Vue {
         this.balance = balance || 0;
         this.height = this.client!.headInfo.height;
         this.countdown = 60;
+
+        if (this.autoSend && this.sufficient) {
+            this.sendAll();
+        }
     }
 
     async sendTransaction(address: string, amount: number, message: string): Promise<string> {
