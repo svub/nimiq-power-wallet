@@ -14,6 +14,7 @@
                         label(for='nimValues') NIM values
                         input(type='radio' v-model='nimValues' :value='false' id='usdValues')
                         label(for='usdValues')  USD values
+                        input.message(v-model='message' placeholder='message')
                         | ---
                         button.add(@click='addTx') +
                         button.addMany(@click='showAddTxs = !showAddTxs') ++
@@ -27,8 +28,7 @@
                             textarea.csv(ref='addViaCsv' placeholder='paste from spreadsheet' @input='testCsv')
                             .results(ref='addViaCsvTest')
                             button.add(@click='addViaCsv') Add
-                        | ---
-                        input.message(v-model='message' placeholder='message')
+                    hr
                     .list
                         .emtpy(v-if='txs.length') add transactions by clicking "+", "++", or "csv"
                         .tx(v-for="tx in txs" :key='tx.id')
@@ -37,6 +37,7 @@
                             input.value(v-model.number='tx.value')
                             | {{ nimValues ? 'NIM' : 'USD' }}
                             .converted.nq-text {{ converted(tx.value) }} {{ nimValues ? 'USD' : 'NIM' }}
+                    hr
                     .status(v-if='txs.length > 0')
                         .total
                             | Total to send
@@ -47,6 +48,7 @@
                         br
                         input(id='autoSend' type='checkbox' v-model='autoSend')
                         label(for='autoSend') Auto send when balance is sufficiant
+                    hr
                     .receipts(v-if='receipts && receipts.length > 0')
                         textarea {{ receipts.join('\n') }}
 </template>

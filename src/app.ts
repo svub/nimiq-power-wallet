@@ -103,10 +103,10 @@ export default class App extends Vue {
 
     addViaCsv() {
         this.txs = this.parseCsv();
+        this.showAddViaCvs = false;
     }
 
     parseCsv(): Tx[] {
-        this.showAddViaCvs = false;
         const csv = (this.$refs.addViaCsv as HTMLTextAreaElement).value.trim();
         const csvData: any[][] = parseCsv(csv, {
             cast: true,
@@ -131,7 +131,7 @@ export default class App extends Vue {
     async sendAll() {
         this.receipts = await Promise.all(this.txs.map((tx) =>
             this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
-        ));
+        )).map((hash) => );
     }
 
     valid(address: string) {
