@@ -129,9 +129,9 @@ export default class App extends Vue {
     }
 
     async sendAll() {
-        this.receipts = await Promise.all(this.txs.map((tx) =>
+        this.receipts = (await Promise.all(this.txs.map((tx) =>
             this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
-        )).map((hash) => );
+        ))).map((hash) => `https://nimiq.watch/#${hash}`);
     }
 
     valid(address: string) {
