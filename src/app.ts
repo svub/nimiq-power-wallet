@@ -66,9 +66,6 @@ export default class App extends Vue {
             } catch (error) {
                 alert(`Failed to load NIM/USD rate. Reason: ${error}`);
             }
-            // ratePromise
-            //     .then(async (response) => this.usdRate = (await response.json())['nimiq-2'].usd)
-            //     .catch((reason) => alert(`Failed to load NIM/USD rate. Reason: ${reason}`));
 
             console.log('loaded.');
             this.loaded = true;
@@ -129,7 +126,10 @@ export default class App extends Vue {
     }
 
     async sendAll() {
-        this.receipts = (await Promise.all(this.txs.map((tx) =>
+        const txs = this.txs
+            .filter((tx) => tx.value > 0)
+            .filter((tx) => this.valid(tx.address));
+        this.receipts = (await Promise.all(txs.map((tx) =>
             this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
         ))).map((hash) => `https://nimiq.watch/#${hash}`);
     }
@@ -161,6 +161,7 @@ export default class App extends Vue {
         this.countdown = 60;
 
         if (this.autoSend && this.sufficient) {
+            this.autoSend = false;
             this.sendAll();
         }
     }
@@ -212,7 +213,9 @@ export default class App extends Vue {
             : await basicTransaction();
 
         // Send to the Nimiq network
+        console.log('plain TX', transaction.toPlain());
         const result = (await client!.sendTransaction(transaction.toPlain()));
+        console.log('hash', result.transactionHash);
         return result.transactionHash;
     }
 }
