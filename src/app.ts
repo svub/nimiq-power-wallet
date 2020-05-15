@@ -126,10 +126,7 @@ export default class App extends Vue {
     }
 
     async sendAll() {
-        const txs = this.txs
-            .filter((tx) => tx.value > 0)
-            .filter((tx) => this.valid(tx.address));
-        this.receipts = (await Promise.all(txs.map((tx) =>
+        this.receipts = (await Promise.all(this.txs.map((tx) =>
             this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
         ))).map((hash) => `https://nimiq.watch/#${hash}`);
     }
@@ -206,6 +203,11 @@ export default class App extends Vue {
             console.log('extended TX', address, amount, 0, client!.headInfo.height, transaction);
             return transaction;
         }
+
+        // validate TX
+        if (amount <= 0) return '' // ignore
+        if (!address || address.trim().length === 0) return '' // ignore
+        if (!this.valid(address)) return `invalid address (${address})`
 
         // create an extended transaction if the message is not empty
         const transaction = message.trim().length > 0
