@@ -205,9 +205,9 @@ export default class App extends Vue {
         }
 
         // validate TX
-        if (amount <= 0) return '' // ignore
-        if (!address || address.trim().length === 0) return '' // ignore
-        if (!this.valid(address)) return `invalid address (${address})`
+        if (amount <= 0) return ''; // spreadsheets might have lines via amount=0... just ignore.
+        if (!address || address.trim().length === 0) return ''; // ignore
+        if (!this.valid(address)) return `invalid address (${address})`;
 
         // create an extended transaction if the message is not empty
         const transaction = message.trim().length > 0
