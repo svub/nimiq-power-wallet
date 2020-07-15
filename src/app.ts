@@ -119,7 +119,7 @@ export default class App extends Vue {
         const valueIndex = first.findIndex((cell) => ValidationUtils.isValidAddress(cell));
         if (valueIndex < 0) throw new Error('Address not found');
         // const valueIndex = first.findIndex((cell) => parseInt(cell, 10) ValidationUtils.isValidAddress(cell));
-        const amountIndex = first.findIndex((cell) => Number.isInteger(cell));
+        const amountIndex = first.findIndex((cell) => Number.isInteger((cell as string).replaceAll(',', '')));
         if (amountIndex < 0) throw new Error('Amount not found');
 
         return csvData.map((row, id) => ({ address: row[valueIndex], value: row[amountIndex], id }));
@@ -128,7 +128,8 @@ export default class App extends Vue {
     async sendAll() {
         this.receipts = (await Promise.all(this.txs.map((tx) =>
             this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
-        ))).map((hash) => `https://nimiq.watch/#${hash}`);
+        )))
+            .map((hash) => (`${hash}`.length > 5 ? `https://nimiq.watch/#${hash}` : ''));
     }
 
     valid(address: string) {
