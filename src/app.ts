@@ -108,7 +108,7 @@ export default class App extends Vue {
         const csvData: any[][] = parseCsv(csv, {
             cast: true,
             // eslint-disable-next-line
-            cast_date: true,
+            cast_date: false,
             delimiter: '\t',
         });
         console.warn(csvData);
@@ -117,12 +117,13 @@ export default class App extends Vue {
         // understand column order
         const first = csvData[0];
         const valueIndex = first.findIndex((cell) => ValidationUtils.isValidAddress(cell));
+        const parseNum = (str: string): number => Number.parseFloat(`${str}`.replace(/,/g, ''));
         if (valueIndex < 0) throw new Error('Address not found');
         // const valueIndex = first.findIndex((cell) => parseInt(cell, 10) ValidationUtils.isValidAddress(cell));
-        const amountIndex = first.findIndex((cell) => Number.isInteger((cell as string).replaceAll(',', '')));
+        const amountIndex = first.findIndex((cell) => !Number.isNaN(parseNum(cell)));
         if (amountIndex < 0) throw new Error('Amount not found');
 
-        return csvData.map((row, id) => ({ address: row[valueIndex], value: row[amountIndex], id }));
+        return csvData.map((row, id) => ({ address: row[valueIndex], value: parseNum(row[amountIndex]), id }));
     }
 
     async sendAll() {
