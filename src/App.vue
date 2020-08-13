@@ -30,19 +30,20 @@
                             button.add(@click='addViaCsv') Add
                     hr
                     .list
-                        .emtpy(v-if='txs.length') add transactions by clicking "+", "++", or "csv"
-                        .tx(v-for="tx in txs" :key='tx.id')
+                        .emtpy(v-if='txData.length') add transactions by clicking "+", "++", or "csv"
+                        .tx(v-for="tx in txData" :key='tx.id')
                             input.address(v-model='tx.address' :class='{valid}')
                             | valid {{ valid(tx.address) }}
                             input.value(v-model.number='tx.value')
                             | {{ nimValues ? 'NIM' : 'USD' }}
                             .converted.nq-text {{ converted(tx.value) }} {{ nimValues ? 'USD' : 'NIM' }}
                     hr
-                    .status(v-if='txs.length > 0')
+                    .status(v-if='txData.length > 0')
                         .total
                             | Total to send
                             | {{ nimValues ? `${total} NIM / ${total * usdRate} USD` : '' }}
                             | {{ !nimValues ? `${total} USD / ${Math.ceil(total / usdRate)} NIM` : '' }}
+                            | including {{ fees }} NIM fees.
                         .sufficient Enough funds? {{ sufficient }}
                         button.send(@click='sendAll' :disabled='!sufficient') send
                         br

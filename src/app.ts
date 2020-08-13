@@ -2,6 +2,7 @@ import '@nimiq/style/nimiq-style.min.css';
 import '@nimiq/vue-components/dist/NimiqVueComponents.css';
 
 import { Component, Vue } from 'vue-property-decorator';
+import { Wallet, BasicTransaction, ExtendedTransaction } from '@nimiq/core-web';
 import { NetworkClient } from '@nimiq/network-client';
 import { ValidationUtils } from '@nimiq/utils';
 import parseCsv from 'csv-parse/lib/sync';
@@ -9,7 +10,7 @@ import { loadNimiqCryptography } from './lib/CoreLoader';
 
 type Nimiq = typeof import('@nimiq/core-web');
 
-export type Tx = {
+export type TxData = {
     address: string,
     value: number,
     id: number,
@@ -21,15 +22,15 @@ let nimiq: Nimiq;
 export default class App extends Vue {
     Nimiq: any;
     client?: NetworkClient;
-    wallet: any;
+    wallet?: Wallet;
     address = '';
     balance = 0;
     loaded = false;
     height = 0;
-    txs: Tx[] = [];
+    txData: TxData[] = [];
     showAddTxs = false;
     showAddViaCvs = true;
-    nimValues = false;
+    nimValues = true;
     usdRate = 0.0;
     countdown = 60;
     receipts: string[] = [];
@@ -45,7 +46,10 @@ export default class App extends Vue {
             nimiq = await loadNimiqCryptography();
             // gives a testnet endpoint if not running on nimiq.com - don't understand logic :(
             // this.client = NetworkClient.Instance;
-            this.client = NetworkClient.createInstance('https://network.nimiq.com');
+
+            this.client = NetworkClient.hasInstance()
+                ? NetworkClient.Instance
+                : NetworkClient.createInstance('https://network.nimiq.com');
             await this.client.init();
             console.log(this.client);
 
@@ -75,7 +79,7 @@ export default class App extends Vue {
     addTx() {
         const address = prompt('paste address') || '';
         const value = parseFloat(prompt('TX value', '0') || '0');
-        this.txs.push({ address, value, id: this.txs.length });
+        this.txData.push({ address, value, id: this.txData.length });
     }
 
     addTxs() {
@@ -87,7 +91,7 @@ export default class App extends Vue {
             const value = parseFloat((this.$refs.addManyValue as HTMLInputElement).value);
             for (const address of addresses.split('\n').map((a) => a.trim())) {
                 console.log({ address, value });
-                this.txs.push({ address, value, id: this.txs.length });
+                this.txData.push({ address, value, id: this.txData.length });
             }
         }
         this.showAddTxs = false;
@@ -99,11 +103,13 @@ export default class App extends Vue {
     }
 
     addViaCsv() {
-        this.txs = this.parseCsv();
+        this.txData = this.parseCsv();
+        const [tx] = this.txData;
+        this.createExtendedTransaction(tx.address, tx.value, 'test message');
         this.showAddViaCvs = false;
     }
 
-    parseCsv(): Tx[] {
+    parseCsv(): TxData[] {
         const csv = (this.$refs.addViaCsv as HTMLTextAreaElement).value.trim();
         const csvData: any[][] = parseCsv(csv, {
             cast: true,
@@ -127,10 +133,8 @@ export default class App extends Vue {
     }
 
     async sendAll() {
-        this.receipts = (await Promise.all(this.txs.map((tx) =>
-            this.sendTransaction(tx.address, this.nimValues ? tx.value : tx.value / this.usdRate, this.message),
-        )))
-            .map((hash) => (`${hash}`.length > 5 ? `https://nimiq.watch/#${hash}` : ''));
+        this.receipts = (await Promise.all(this.txs.map((tx) => tx ? this.sendTransaction(tx) : null)))
+            .map((hash) => (hash ? `https://nimiq.watch/#${hash}` : ''));
     }
 
     valid(address: string) {
@@ -141,9 +145,20 @@ export default class App extends Vue {
         return this.nimValues ? value * this.usdRate : Math.ceil(value / this.usdRate);
     }
 
-
     get total() {
-        return this.txs.map((tx) => tx.value).reduce((total, value) => total + value, 0);
+        return this.txs.reduce((total, tx) => total + (tx ? tx.value + tx.fee : 0), 0) / 100000;
+    }
+
+    get fees() {
+        return this.txs.reduce((total, tx) => total + (tx ? tx.fee : 0), 0) / 100000;
+    }
+
+    get txs(): (BasicTransaction | ExtendedTransaction | null)[] {
+        return this.txData.map((tx) => this.createTransaction(
+            tx.address,
+            this.nimValues ? tx.value : tx.value / this.usdRate,
+            this.message,
+        ));
     }
 
     get sufficient() {
@@ -165,61 +180,67 @@ export default class App extends Vue {
         }
     }
 
-    async sendTransaction(address: string, amount: number, message: string): Promise<string> {
+    async sendTransaction(transaction: BasicTransaction | ExtendedTransaction): Promise<string> {
+        // Send to the Nimiq network
+        console.log('plain TX', transaction.toPlain());
+        const result = (await this.client!.sendTransaction(transaction.toPlain()));
+        console.log('hash', result.transactionHash);
+        return result.transactionHash;
+    }
+
+    createTransaction(address: string, amount: number, message: string) {
+        // validate input data
+        if ((amount <= 0) // spreadsheets might have lines via amount=0... just ignore.
+            || (!address || address.trim().length === 0) // ignore lines with empty addresses
+            || (!this.valid(address))) return null; // add warning for invalid addresses
+
+        // create an extended transaction if the message is not empty
+        return message.trim().length > 0
+            ? this.createExtendedTransaction(address, amount, message)
+            : this.createBasicTransaction(address, amount);
+    }
+
+    // helper function to create the basic transaction used in tutorial 3
+    createBasicTransaction(address: string, amount: number): BasicTransaction {
         const { wallet, client } = this;
+        console.log('basic TX', address, amount, 0, client!.headInfo.height);
+        return wallet!.createTransaction(
+            nimiq.Address.fromUserFriendlyAddress(address),
+            nimiq.Policy.coinsToLunas(amount),
+            138, // fee
+            client!.headInfo.height,
+        );
+    }
 
-        // helper function to create the basic transaction used in tutorial 3
-        async function basicTransaction() {
-            console.log('basic TX', address, amount, 0, client!.headInfo.height);
-            return wallet.createTransaction(
-                nimiq.Address.fromUserFriendlyAddress(address),
-                nimiq.Policy.coinsToLunas(amount),
-                0, // fee
-                client!.headInfo.height,
-            );
-        }
+    // create an extended transaction that will carry the message as "extraData"
+    createExtendedTransaction(address: string, amount: number, message: string): ExtendedTransaction {
+        const { wallet, client } = this;
+        // turn string into a safely encoded list of bytes
+        const extraData = nimiq.BufferUtils.fromUtf8(message);
 
-        // create an extended transaction that will carry the message as "extraData"
-        async function extendedTransaction() {
-            // turn string into a safely encoded list of bytes
-            const extraData = nimiq.BufferUtils.fromUtf8(message);
-
-            const transaction = new nimiq.ExtendedTransaction(
-                wallet.address,
+        function create(fee = 0) {
+            return new nimiq.ExtendedTransaction(
+                wallet!.address,
                 nimiq.Account.Type.BASIC,
                 nimiq.Address.fromUserFriendlyAddress(address),
                 nimiq.Account.Type.BASIC,
                 nimiq.Policy.coinsToLunas(amount),
-                0,
+                fee,
                 client!.headInfo.height,
                 nimiq.Transaction.Flag.NONE,
                 extraData,
             );
-
-            // sign transaction with key pair from our wallet
-            const { publicKey, privateKey } = wallet.keyPair;
-            const signature = nimiq.Signature.create(privateKey, publicKey, transaction.serializeContent());
-            const proof = nimiq.SignatureProof.singleSig(publicKey, signature);
-            transaction.proof = proof.serialize();
-
-            console.log('extended TX', address, amount, 0, client!.headInfo.height, transaction);
-            return transaction;
         }
+        const fee = create().serialize().length * 2;
+        const transaction = create(fee);
 
-        // validate TX
-        if (amount <= 0) return ''; // spreadsheets might have lines via amount=0... just ignore.
-        if (!address || address.trim().length === 0) return ''; // ignore
-        if (!this.valid(address)) return `invalid address (${address})`;
+        // sign transaction with key pair from our wallet
+        const { publicKey, privateKey } = wallet!.keyPair;
+        const signature = nimiq.Signature.create(privateKey, publicKey, transaction.serializeContent());
+        const proof = nimiq.SignatureProof.singleSig(publicKey, signature);
+        transaction.proof = proof.serialize();
 
-        // create an extended transaction if the message is not empty
-        const transaction = message.trim().length > 0
-            ? await extendedTransaction()
-            : await basicTransaction();
-
-        // Send to the Nimiq network
-        console.log('plain TX', transaction.toPlain());
-        const result = (await client!.sendTransaction(transaction.toPlain()));
-        console.log('hash', result.transactionHash);
-        return result.transactionHash;
+        console.log('extended TX', address, amount, 0, client!.headInfo.height, transaction);
+        return transaction;
     }
 }
