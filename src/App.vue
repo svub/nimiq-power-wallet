@@ -40,10 +40,10 @@
                     hr
                     .status(v-if='txData.length > 0')
                         .total
-                            | Total to send
+                            | Sending
                             | {{ nimValues ? `${total} NIM / ${total * usdRate} USD` : '' }}
                             | {{ !nimValues ? `${total} USD / ${Math.ceil(total / usdRate)} NIM` : '' }}
-                            | including {{ fees }} NIM fees.
+                            | in total including {{ fees }} NIM fees.
                         .sufficient Enough funds? {{ sufficient }}
                         button.send(@click='sendAll' :disabled='!sufficient') send
                         br
@@ -64,6 +64,10 @@
 
 textarea {
     height: 8em;
+    width: 30em;
+}
+
+.list .address {
     width: 30em;
 }
 </style>
