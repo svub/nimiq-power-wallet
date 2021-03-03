@@ -17,7 +17,7 @@
     "@nimiq/vue-components": "https://github.com/nimiq/vue-components.git#build/master",
     "core-js": "^3.6.4",
     "csv-parse": "^4.8.8",
-    "pug": "^2.0.4",
+    "pug": "^3.0.1",
     "pug-plain-loader": "^1.0.0",
     "vue": "^2.6.11",
     "vue-class-component": "^7.2.2",
