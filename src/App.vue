@@ -33,9 +33,10 @@
                         .emtpy(v-if='txData.length') add transactions by clicking "+", "++", or "csv"
                         .tx(v-for="tx in txData" :key='tx.id')
                             input.address(v-model='tx.address' :class='{valid}')
-                            | valid {{ valid(tx.address) }}
+                            | - valid {{ validAddress(tx.address) }} -
                             input.value(v-model.number='tx.value')
                             | {{ nimValues ? 'NIM' : 'USD' }}
+                            | - will send {{ valid(tx) }} -
                             .converted.nq-text {{ converted(tx.value) }} {{ nimValues ? 'USD' : 'NIM' }}
                     hr
                     .status(v-if='txData.length > 0')

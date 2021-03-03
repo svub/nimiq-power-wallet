@@ -2,7 +2,7 @@ import '@nimiq/style/nimiq-style.min.css';
 import '@nimiq/vue-components/dist/NimiqVueComponents.css';
 
 import { Component, Vue } from 'vue-property-decorator';
-import { Wallet, BasicTransaction, ExtendedTransaction } from '@nimiq/core-web';
+import { Wallet, BasicTransaction, ExtendedTransaction, Transaction } from '@nimiq/core-web';
 import { NetworkClient } from '@nimiq/network-client';
 import { ValidationUtils } from '@nimiq/utils';
 import parseCsv from 'csv-parse/lib/sync';
@@ -104,8 +104,8 @@ export default class App extends Vue {
 
     addViaCsv() {
         this.txData = this.parseCsv();
-        const [tx] = this.txData;
-        this.createExtendedTransaction(tx.address, tx.value, 'test message');
+        // const [tx] = this.txData;
+        // this.createExtendedTransaction(tx.address, tx.value, 'test message');
         this.showAddViaCvs = false;
     }
 
@@ -137,8 +137,12 @@ export default class App extends Vue {
             .map((hash) => (hash ? `https://nimiq.watch/#${hash}` : ''));
     }
 
-    valid(address: string) {
+    validAddress(address: string) {
         return ValidationUtils.isValidAddress(address);
+    }
+
+    valid(tx: TxData) {
+        return this.validAddress(tx.address) && Number.isFinite(tx.value) && tx.value > 0;
     }
 
     converted(value: number) {
@@ -154,11 +158,11 @@ export default class App extends Vue {
     }
 
     get txs(): (BasicTransaction | ExtendedTransaction | null)[] {
-        return this.txData.map((tx) => this.createTransaction(
+        return this.txData.map((tx) => this.valid(tx) ? this.createTransaction(
             tx.address,
             this.nimValues ? tx.value : tx.value / this.usdRate,
             this.message,
-        ));
+        ) : null);
     }
 
     get sufficient() {
@@ -192,7 +196,7 @@ export default class App extends Vue {
         // validate input data
         if ((amount <= 0) // spreadsheets might have lines via amount=0... just ignore.
             || (!address || address.trim().length === 0) // ignore lines with empty addresses
-            || (!this.valid(address))) return null; // add warning for invalid addresses
+            || (!this.validAddress(address))) return null; // add warning for invalid addresses
 
         // create an extended transaction if the message is not empty
         return message.trim().length > 0
